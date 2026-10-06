@@ -103,7 +103,7 @@ def index():
                             int_old.append(int_o)
                         if int_n > 0:
                             mz_new.append(mz_n)
-                            int_new.append(int_n)
+                            int_n.append(int_n)
                     except (ValueError, TypeError):
                         pass
                 
@@ -119,11 +119,11 @@ def index():
                 plt.title(f'Molecule: {molecule_id}', fontsize=10, fontweight='bold')
                 plt.xlabel('m/z', fontsize=9)
                 plt.ylabel('Intensity (%)', fontsize=9)
-                
-                # 完全移除 plt.yticks() 呼叫，直接由 matplotlib 自動處理刻度，徹底避開 Python 3.14 相容性 bug
                 plt.ylim(-110, 110)
                 plt.grid(True, linestyle='--', alpha=0.3)
-                plt.tight_layout()
+                
+                # 完全移除 plt.tight_layout()，改用 subplots_adjust 設定邊距，安全避開 Python 3.14 引擎錯誤
+                plt.subplots_adjust(left=0.12, right=0.95, top=0.88, bottom=0.18)
                 
                 img_path = f'static/{molecule_id}_{random.randint(1000,9999)}.png'
                 plt.savefig(img_path)
