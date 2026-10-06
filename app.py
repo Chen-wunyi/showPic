@@ -107,27 +107,23 @@ def index():
                     except (ValueError, TypeError):
                         pass
                 
-                plt.figure(figsize=(8, 4), dpi=150)
-                for m, intensity in zip(mz_old, int_old):
-                    plt.vlines(m, 0, intensity, color='royalblue', linewidth=1.5)
-                    plt.plot(m, intensity, 'o', color='royalblue', markersize=4)
-                for m, intensity in zip(mz_new, int_new):
-                    plt.vlines(m, 0, -intensity, color='crimson', linewidth=1.5)
-                    plt.plot(m, -intensity, 'o', color='crimson', markersize=4)
-                    
-                plt.axhline(0, color='black', linewidth=0.8)
-                plt.title(f'Molecule: {molecule_id}', fontsize=10, fontweight='bold')
-                plt.xlabel('m/z', fontsize=9)
-                plt.ylabel('Intensity (%)', fontsize=9)
-                plt.ylim(-110, 110)
-                plt.grid(True, linestyle='--', alpha=0.3)
+                # 建立畫布
+                fig, ax = plt.subplots(figsize=(8, 4), dpi=150)
                 
-                # 完全移除 plt.tight_layout()，改用 subplots_adjust 設定邊距，安全避開 Python 3.14 引擎錯誤
-                plt.subplots_adjust(left=0.12, right=0.95, top=0.88, bottom=0.18)
+                # 使用純 vlines 繪製，不呼叫 plt.plot 圓點，避開 Python 3.14 深層複製錯誤
+                ax.vlines(mz_old, 0, int_old, color='royalblue', linewidth=2)
+                ax.vlines(mz_new, 0, [-val for val in int_new], color='crimson', linewidth=2)
+                    
+                ax.axhline(0, color='black', linewidth=0.8)
+                ax.set_title(f'Molecule: {molecule_id}', fontsize=10, fontweight='bold')
+                ax.set_xlabel('m/z', fontsize=9)
+                ax.set_ylabel('Intensity (%)', fontsize=9)
+                ax.set_ylim(-110, 110)
+                ax.grid(True, linestyle='--', alpha=0.3)
                 
                 img_path = f'static/{molecule_id}_{random.randint(1000,9999)}.png'
-                plt.savefig(img_path)
-                plt.close()
+                fig.savefig(img_path, bbox_inches='tight')
+                plt.close(fig)
                 images.append(img_path)
         except Exception as e:
             error_message = traceback.format_exc()
