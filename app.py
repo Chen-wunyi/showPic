@@ -88,11 +88,10 @@ def index():
                 
                 for i in range(1, 11):
                     try:
-                        # 兼容不同的 CSV 欄位命名方式
-                        mz_o_val = row.get(f'第{i}大峰_m/z(舊)') or row.get(f'old_mz_{i}') or 0
-                        int_o_val = row.get(f'第{i}大峰_強度(舊)') or row.get(f'old_int_{i}') or 0
-                        mz_n_val = row.get(f'第{i}大峰_m/z(新)') or row.get(f'new_mz_{i}') or 0
-                        int_n_val = row.get(f'第{i}大峰_強度(新)') or row.get(f'new_int_{i}') or 0
+                        mz_o_val = row.get(f'第{i}大峰_m/z(舊)') or 0
+                        int_o_val = row.get(f'第{i}大峰_強度(舊)') or 0
+                        mz_n_val = row.get(f'第{i}大峰_m/z(新)') or 0
+                        int_n_val = row.get(f'第{i}大峰_強度(新)') or 0
                         
                         mz_o = float(mz_o_val)
                         int_o = float(int_o_val)
@@ -120,7 +119,10 @@ def index():
                 plt.title(f'Molecule: {molecule_id}', fontsize=10, fontweight='bold')
                 plt.xlabel('m/z', fontsize=9)
                 plt.ylabel('Intensity (%)', fontsize=9)
-                plt.yticks([-100, -50, 0, 50, 100], ['100', '50', '0', '50', '100'])
+                
+                # 修正此處：改用安全的純數字刻度
+                plt.yticks([-100, -50, 0, 50, 100])
+                
                 plt.ylim(-110, 110)
                 plt.grid(True, linestyle='--', alpha=0.3)
                 plt.tight_layout()
@@ -130,7 +132,6 @@ def index():
                 plt.close()
                 images.append(img_path)
         except Exception as e:
-            # 如果發生任何錯誤，直接抓取錯誤堆疊顯示在網頁上
             error_message = traceback.format_exc()
             
     return render_template_string(HTML_TEMPLATE, images=images, n_value=n_value, error_message=error_message)
