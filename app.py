@@ -1,6 +1,6 @@
 import os
 import random
-import pandas as pd
+import csv
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -8,16 +8,18 @@ from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
-# 讀取您的比對資料 CSV
 CSV_FILE = 'pfas_top10_peaks_comparison_msp_to_msp_test.csv'
+
+# 讀取 CSV 數據到記憶體中 (使用 Python 內建 csv 模組，不需要 pandas)
+rows_data = []
 if os.path.exists(CSV_FILE):
-    df = pd.read_csv(CSV_FILE)
-else:
-    df = None
+    with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows_data.append(row)
 
 os.makedirs('static', exist_ok=True)
 
-# 內嵌的網頁前端 HTML 畫面
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -65,32 +67,35 @@ def index():
     images = []
     n_value = 5
     
-    if df is not None and request.method == 'POST':
+    if rows_data and request.method == 'POST':
         try:
             n_value = int(request.form.get('n_count', 5))
         except ValueError:
             n_value = 5
         n_value = max(1, min(n_value, 20))
         
-        selected_rows = df.sample(n=min(n_value, len(df)))
+        selected_rows = random.sample(rows_data, min(n_value, len(rows_data)))
         
-        for idx, row in selected_rows.iterrows():
-            molecule_id = row['分子編號']
+        for row in selected_rows:
+            molecule_id = row.get('分子編號', 'Unknown')
             mz_old, int_old = [], []
             mz_new, int_new = [], []
             
             for i in range(1, 11):
-                mz_o = row[f'第{i}大峰_m/z(舊)']
-                int_o = row[f'第{i}大峰_強度(舊)']
-                mz_n = row[f'第{i}大峰_m/z(新)']
-                int_n = row[f'第{i}大峰_強度(新)']
-                
-                if not pd.isna(mz_o) and int_o > 0:
-                    mz_old.append(mz_o)
-                    int_old.append(int_o)
-                if not pd.isna(mz_n) and int_n > 0:
-                    mz_new.append(mz_n)
-                    int_new.append(int_n)
+                try:
+                    mz_o = float(row.get(f'第{i}大峰_m/z(舊)', 0) or 0)
+                    int_o = float(row.get(f'第{i}大峰_強度(舊)', 0) or 0)
+                    mz_n = float(row.get(f'第{i}大峰_m/z(新)', 0) or 0)
+                    int_n = float(row.get(f'第{i}大峰_強度(新)', 0) or 0)
+                    
+                    if int_o > 0:
+                        mz_old.append(mz_o)
+                        int_old.append(int_o)
+                    if int_n > 0:
+                        mz_new.append(mz_n)
+                        int_new.append(int_n)
+                except (ValueError, TypeError):
+                    pass
             
             plt.figure(figsize=(8, 4), dpi=150)
             for m, intensity in zip(mz_old, int_old):
