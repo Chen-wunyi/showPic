@@ -103,7 +103,7 @@ def index():
                             int_old.append(int_o)
                         if int_n > 0:
                             mz_new.append(mz_n)
-                            int_n.append(int_n)
+                            int_new.append(int_n)
                     except (ValueError, TypeError):
                         pass
                 
