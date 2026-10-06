@@ -120,9 +120,7 @@ def index():
                 plt.xlabel('m/z', fontsize=9)
                 plt.ylabel('Intensity (%)', fontsize=9)
                 
-                # 修正此處：改用安全的純數字刻度
-                plt.yticks([-100, -50, 0, 50, 100])
-                
+                # 完全移除 plt.yticks() 呼叫，直接由 matplotlib 自動處理刻度，徹底避開 Python 3.14 相容性 bug
                 plt.ylim(-110, 110)
                 plt.grid(True, linestyle='--', alpha=0.3)
                 plt.tight_layout()
