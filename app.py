@@ -9,7 +9,7 @@ from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
-CSV_FILE = 'pfas_top10_peaks_(p1_p1216).msp'
+CSV_FILE = 'pfas_top10_peaks_(p1_p1216).csv'
 
 # 讀取 CSV 數據：將每個分子的低、中、高能量資料分門別類存入字典
 # 結構: { 'P_1': { '低能量': {row}, '中能量': {row}, '高能量': {row} }, ... }
