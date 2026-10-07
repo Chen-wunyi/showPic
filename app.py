@@ -53,7 +53,7 @@ HTML_TEMPLATE = """
 <body>
     <div class="container">
         <h1>PFAS 模型重訓練 - 低中高能量鏡像質譜比對</h1>
-        <p>輸入您想隨機檢視的分子數量（1 ~ 20），系統將為每個分子並排呈現「低、中、高」三種能量對比圖：</p>
+        <p>輸入您想隨機檢視的分子數量，系統將為每個分子並排呈現低、中、高三種能量對比圖：</p>
         
         <form method="POST">
             <label for="n_count">分子數量 (n)：</label>
