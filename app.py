@@ -59,7 +59,7 @@ HTML_TEMPLATE = """
         .plots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
         .plot-item img { max-width: 100%; height: auto; border-radius: 5px; border: 1px solid #ddd; }
         .plot-item p { font-size: 14px; font-weight: bold; color: #444; margin: 5px 0; }
-        .score-box { font-size: 13px; color: #666; margin-top: 4px; background: #f8f9fa; padding: 6px; border-radius: 4px; }
+        .score-box { font-size: 13px; color: #666; margin-top: 4px; background: #f8f9fa; padding: 6px; border-radius: 4px; font-weight: bold; }
         .error-box { color: red; background: #ffe6e6; padding: 15px; border-radius: 5px; text-align: left; white-space: pre-wrap; margin-top: 20px; }
     </style>
     <script>
@@ -106,8 +106,7 @@ HTML_TEMPLATE = """
                             {% if item.low_img %}
                                 <img src="{{ item.low_img }}" alt="Low Energy">
                                 <div class="score-box">
-                                    Dot: {{ item.low_dot }}<br>
-                                    Cosine: {{ item.low_cos }}
+                                    dot product : {{ item.low_score }}
                                 </div>
                             {% else %}
                                 <p style="color: #999;">無此能量資料</p>
@@ -119,8 +118,7 @@ HTML_TEMPLATE = """
                             {% if item.med_img %}
                                 <img src="{{ item.med_img }}" alt="Medium Energy">
                                 <div class="score-box">
-                                    Dot: {{ item.med_dot }}<br>
-                                    Cosine: {{ item.med_cos }}
+                                    dot product : {{ item.med_score }}
                                 </div>
                             {% else %}
                                 <p style="color: #999;">無此能量資料</p>
@@ -132,8 +130,7 @@ HTML_TEMPLATE = """
                             {% if item.high_img %}
                                 <img src="{{ item.high_img }}" alt="High Energy">
                                 <div class="score-box">
-                                    Dot: {{ item.high_dot }}<br>
-                                    Cosine: {{ item.high_cos }}
+                                    dot product : {{ item.high_score }}
                                 </div>
                             {% else %}
                                 <p style="color: #999;">無此能量資料</p>
@@ -202,14 +199,10 @@ def index():
             except (ValueError, TypeError):
               pass
 
-          dot_val = row.get('Dot_Product', 'N/A')
-          cos_val = row.get('Weighted_Cosine_Similarity', 'N/A')
+          # 讀取我們算好的加權分數（作為 dot product 顯示）
+          score_val = row.get('Weighted_Cosine_Similarity', 'N/A')
           try:
-            dot_val = f'{float(dot_val):.2f}'
-          except:
-            pass
-          try:
-            cos_val = f'{float(cos_val):.4f}'
+            score_val = f'{float(score_val):.4f}'
           except:
             pass
 
@@ -237,23 +230,16 @@ def index():
           fig.savefig(img_path, bbox_inches='tight')
           plt.close(fig)
 
-          img_paths[en_key] = {
-              'img': img_path,
-              'dot': dot_val,
-              'cos': cos_val,
-          }
+          img_paths[en_key] = {'img': img_path, 'score': score_val}
 
         results.append({
             'mol_id': query_id,
             'low_img': img_paths.get('low', {}).get('img', ''),
-            'low_dot': img_paths.get('low', {}).get('dot', ''),
-            'low_cos': img_paths.get('low', {}).get('cos', ''),
+            'low_score': img_paths.get('low', {}).get('score', 'N/A'),
             'med_img': img_paths.get('medium', {}).get('img', ''),
-            'med_dot': img_paths.get('medium', {}).get('dot', ''),
-            'med_cos': img_paths.get('medium', {}).get('cos', ''),
+            'med_score': img_paths.get('medium', {}).get('score', 'N/A'),
             'high_img': img_paths.get('high', {}).get('img', ''),
-            'high_dot': img_paths.get('high', {}).get('dot', ''),
-            'high_cos': img_paths.get('high', {}).get('cos', ''),
+            'high_score': img_paths.get('high', {}).get('score', 'N/A'),
         })
 
       if not results and mol_ids and not error_message:
