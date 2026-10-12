@@ -9,23 +9,54 @@ import matplotlib.pyplot as plt
 from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
+CSV_FILE = 'pfas_top10_peaks_with_weighted_cosine.csv'
 
-CSV_FILE = 'pfas_top10_peaks_sorted_by_dot_product.csv'
+# 預設清單
+LOW_LIST = [
+    'P_64',
+    'P_137',
+    'P_141',
+    'P_319',
+    'P_388',
+    'P_496',
+    'P_776',
+    'P_869',
+    'P_925',
+    'P_1174',
+]
+HIGH_LIST = [
+    'P_1155',
+    'P_1164',
+    'P_1180',
+    'P_1190',
+    'P_1193',
+    'P_1201',
+    'P_1202',
+]
 
-# 讀取 CSV 數據：將每個分子的低、中、高能量資料分門別類存入字典
-molecules_data = {}
-if os.path.exists(CSV_FILE):
-  with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-      mol_id = row.get('分子編號')
-      energy_lvl = row.get('能量級別')  # 低能量/中能量/高能量
-      if mol_id:
-        mol_key = mol_id.strip().upper()
-        if mol_key not in molecules_data:
-          molecules_data[mol_key] = {}
-        if energy_lvl:
-          molecules_data[mol_key][energy_lvl] = row
+
+def load_molecules_data():
+  """每次讀取時動態載入 CSV，確保資料永遠是最新的"""
+  molecules_data = {}
+  target_file = (
+      CSV_FILE
+      if os.path.exists(CSV_FILE)
+      else 'pfas_top10_peaks_with_weighted_cosine.csv'
+  )
+  if os.path.exists(target_file):
+    with open(target_file, mode='r', encoding='utf-8-sig') as f:
+      reader = csv.DictReader(f)
+      for row in reader:
+        mol_id = row.get('分子編號')
+        energy_lvl = row.get('能量級別')  # 低能量/中能量/高能量
+        if mol_id:
+          mol_key = mol_id.strip().upper()
+          if mol_key not in molecules_data:
+            molecules_data[mol_key] = {}
+          if energy_lvl:
+            molecules_data[mol_key][energy_lvl] = row
+  return molecules_data
+
 
 os.makedirs('static', exist_ok=True)
 
@@ -54,32 +85,20 @@ HTML_TEMPLATE = """
         .score-box { font-size: 13px; color: #666; margin-top: 4px; background: #f8f9fa; padding: 6px; border-radius: 4px; }
         .error-box { color: red; background: #ffe6e6; padding: 15px; border-radius: 5px; text-align: left; white-space: pre-wrap; margin-top: 20px; }
     </style>
-    <script>
-        function loadPreset(type) {
-            let lowArr = ["P_64", "P_137", "P_141", "P_319", "P_388", "P_496", "P_776", "P_869", "P_925", "P_1174"];
-            let highArr = ["P_1155", "P_1164", "P_1180", "P_1190", "P_1193", "P_1201", "P_1202"];
-            let textarea = document.getElementById("mol_query");
-            if (type === 'low') {
-                textarea.value = lowArr.join("\\n");
-            } else if (type === 'high') {
-                textarea.value = highArr.join("\\n");
-            }
-        }
-    </script>
 </head>
 <body>
     <div class="container">
         <h1>PFAS 模型重訓練 - 多分子多能量鏡像檢視器</h1>
-        <p>請輸入多個分子編號（可以換行、空格或逗號隔開），或點擊下方按鈕直接載入預設清單：</p>
+        <p>請輸入多個分子編號（可以換行、空格或逗號隔開），或點擊下方按鈕載入預設清單：</p>
         
         <form method="POST">
             <div>
                 <textarea id="mol_query" name="mol_query" placeholder="例如: P_64 P_137 或直接換行貼上">{{ query_raw }}</textarea>
             </div>
             <div class="btn-group">
-                <button type="submit">查詢</button>
-                <button type="button" class="btn-preset" onclick="loadPreset('low')">Load Data (Low)</button>
-                <button type="button" class="btn-preset" onclick="loadPreset('high')">Load Data (High)</button>
+                <button type="submit" name="action" value="search">查詢</button>
+                <button type="submit" name="action" value="load_low" class="btn-preset">Load Data (Low)</button>
+                <button type="submit" name="action" value="load_high" class="btn-preset">Load Data (High)</button>
             </div>
         </form>
 
@@ -149,16 +168,24 @@ def index():
 
   if request.method == 'POST':
     try:
-      query_raw = request.form.get('mol_query', '').strip()
-      # 更強健的切割方式：以換行、逗號或空白分割
+      action = request.form.get('action', 'search')
+      query_raw = request.form.get('mol_query', '')
+
+      if action == 'load_low':
+        query_raw = '\n'.join(LOW_LIST)
+      elif action == 'load_high':
+        query_raw = '\n'.join(HIGH_LIST)
+
       raw_lines = query_raw.replace(',', '\n').split('\n')
       mol_ids = [line.strip().upper() for line in raw_lines if line.strip()]
-      mol_ids = list(dict.fromkeys(mol_ids))  # 去重但保持順序
+      mol_ids = list(dict.fromkeys(mol_ids))
 
-      if not mol_ids:
+      if not mol_ids and action == 'search':
         error_message = '請至少輸入一個有效的分子編號。'
 
+      molecules_data = load_molecules_data()
       not_found = []
+
       for query_id in mol_ids:
         if query_id not in molecules_data:
           not_found.append(query_id)
@@ -246,7 +273,7 @@ def index():
             'high_cos': img_paths.get('high', {}).get('cos', ''),
         })
 
-      if not results and not error_message:
+      if not results and mol_ids and not error_message:
         error_message = (
             '找不到您輸入的任何分子編號，請確認編號是否正確（例如 P_64）。'
         )
