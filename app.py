@@ -11,29 +11,6 @@ from flask import Flask, render_template_string, request
 app = Flask(__name__)
 CSV_FILE = 'pfas_top10_peaks_with_weighted_cosine.csv'
 
-# 預設清單
-LOW_LIST = [
-    'P_64',
-    'P_137',
-    'P_141',
-    'P_319',
-    'P_388',
-    'P_496',
-    'P_776',
-    'P_869',
-    'P_925',
-    'P_1174',
-]
-HIGH_LIST = [
-    'P_1155',
-    'P_1164',
-    'P_1180',
-    'P_1190',
-    'P_1193',
-    'P_1201',
-    'P_1202',
-]
-
 
 def load_molecules_data():
   """每次讀取時動態載入 CSV，確保資料永遠是最新的"""
@@ -85,6 +62,18 @@ HTML_TEMPLATE = """
         .score-box { font-size: 13px; color: #666; margin-top: 4px; background: #f8f9fa; padding: 6px; border-radius: 4px; }
         .error-box { color: red; background: #ffe6e6; padding: 15px; border-radius: 5px; text-align: left; white-space: pre-wrap; margin-top: 20px; }
     </style>
+    <script>
+        function loadPreset(type) {
+            let lowArr = ["P_64", "P_137", "P_141", "P_319", "P_388", "P_496", "P_776", "P_869", "P_925", "P_1174"];
+            let highArr = ["P_1155", "P_1164", "P_1180", "P_1190", "P_1193", "P_1201", "P_1202"];
+            let textarea = document.getElementById("mol_query");
+            if (type === 'low') {
+                textarea.value = lowArr.join("\\n");
+            } else if (type === 'high') {
+                textarea.value = highArr.join("\\n");
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -96,9 +85,9 @@ HTML_TEMPLATE = """
                 <textarea id="mol_query" name="mol_query" placeholder="例如: P_64 P_137 或直接換行貼上">{{ query_raw }}</textarea>
             </div>
             <div class="btn-group">
-                <button type="submit" name="action" value="search">查詢</button>
-                <button type="submit" name="action" value="load_low" class="btn-preset">Load Data (Low)</button>
-                <button type="submit" name="action" value="load_high" class="btn-preset">Load Data (High)</button>
+                <button type="submit">查詢</button>
+                <button type="button" class="btn-preset" onclick="loadPreset('low')">Load Data (Low)</button>
+                <button type="button" class="btn-preset" onclick="loadPreset('high')">Load Data (High)</button>
             </div>
         </form>
 
@@ -168,19 +157,13 @@ def index():
 
   if request.method == 'POST':
     try:
-      action = request.form.get('action', 'search')
       query_raw = request.form.get('mol_query', '')
-
-      if action == 'load_low':
-        query_raw = '\n'.join(LOW_LIST)
-      elif action == 'load_high':
-        query_raw = '\n'.join(HIGH_LIST)
 
       raw_lines = query_raw.replace(',', '\n').split('\n')
       mol_ids = [line.strip().upper() for line in raw_lines if line.strip()]
       mol_ids = list(dict.fromkeys(mol_ids))
 
-      if not mol_ids and action == 'search':
+      if not mol_ids:
         error_message = '請至少輸入一個有效的分子編號。'
 
       molecules_data = load_molecules_data()
