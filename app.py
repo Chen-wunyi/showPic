@@ -1,7 +1,6 @@
 import csv
 import os
 import random
-import re
 import traceback
 import matplotlib
 
@@ -22,10 +21,11 @@ if os.path.exists(CSV_FILE):
       mol_id = row.get('分子編號')
       energy_lvl = row.get('能量級別')  # 低能量/中能量/高能量
       if mol_id:
-        if mol_id not in molecules_data:
-          molecules_data[mol_id] = {}
+        mol_key = mol_id.strip().upper()
+        if mol_key not in molecules_data:
+          molecules_data[mol_key] = {}
         if energy_lvl:
-          molecules_data[mol_id][energy_lvl] = row
+          molecules_data[mol_key][energy_lvl] = row
 
 os.makedirs('static', exist_ok=True)
 
@@ -144,24 +144,24 @@ HTML_TEMPLATE = """
 @app.route('/', methods=['GET', 'POST'])
 def index():
   results = []
-  query_raw = 'P_64\nP_137\nP_141'
+  query_raw = ''
   error_message = None
 
   if request.method == 'POST':
     try:
       query_raw = request.form.get('mol_query', '').strip()
-      mol_ids = [
-          m.strip()
-          for m in re.split(r'[\s,\n\r]+', query_raw)
-          if m.strip()
-      ]
-      mol_ids = list(dict.fromkeys(mol_ids))
+      # 更強健的切割方式：以換行、逗號或空白分割
+      raw_lines = query_raw.replace(',', '\n').split('\n')
+      mol_ids = [line.strip().upper() for line in raw_lines if line.strip()]
+      mol_ids = list(dict.fromkeys(mol_ids))  # 去重但保持順序
 
       if not mol_ids:
         error_message = '請至少輸入一個有效的分子編號。'
 
+      not_found = []
       for query_id in mol_ids:
         if query_id not in molecules_data:
+          not_found.append(query_id)
           continue
 
         mol_dict = molecules_data[query_id]
@@ -250,6 +250,8 @@ def index():
         error_message = (
             '找不到您輸入的任何分子編號，請確認編號是否正確（例如 P_64）。'
         )
+      elif not_found:
+        error_message = f'注意：以下分子編號在資料庫中找不到：{", ".join(not_found)}'
 
     except Exception as e:
       error_message = traceback.format_exc()
