@@ -14,7 +14,6 @@ app = Flask(__name__)
 CSV_FILE = 'pfas_top10_peaks_sorted_by_dot_product.csv'
 
 # 讀取 CSV 數據：將每個分子的低、中、高能量資料分門別類存入字典
-# 結構: { 'P_1': { '低能量': {row}, '中能量': {row}, '高能量': {row} }, ... }
 molecules_data = {}
 if os.path.exists(CSV_FILE):
   with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
@@ -41,7 +40,7 @@ HTML_TEMPLATE = """
         .container { max-width: 1150px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); }
         h1 { color: #333; }
         form { margin: 20px 0; }
-        textarea { padding: 8px; width: 400px; height: 80px; font-size: 14px; border: 1px solid #ccc; border-radius: 5px; text-align: left; vertical-align: middle; }
+        textarea { padding: 8px; width: 400px; height: 90px; font-size: 14px; border: 1px solid #ccc; border-radius: 5px; text-align: left; vertical-align: middle; }
         .btn-group { margin-top: 10px; }
         button { padding: 9px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 0 5px; }
         button:hover { background-color: #0056b3; }
@@ -57,13 +56,13 @@ HTML_TEMPLATE = """
     </style>
     <script>
         function loadPreset(type) {
-            let lowList = "P_64\\nP_137\\nP_141\\nP_319\\nP_388\\nP_496\\nP_776\\nP_869\\nP_925\\nP_1174";
-            let highList = "P_1155\\nP_1164\\nP_1180\\nP_1190\\nP_1193\\nP_1201\\nP_1202";
+            let lowArr = ["P_64", "P_137", "P_141", "P_319", "P_388", "P_496", "P_776", "P_869", "P_925", "P_1174"];
+            let highArr = ["P_1155", "P_1164", "P_1180", "P_1190", "P_1193", "P_1201", "P_1202"];
             let textarea = document.getElementById("mol_query");
             if (type === 'low') {
-                textarea.value = lowList;
+                textarea.value = lowArr.join("\\n");
             } else if (type === 'high') {
-                textarea.value = highList;
+                textarea.value = highArr.join("\\n");
             }
         }
     </script>
@@ -75,7 +74,7 @@ HTML_TEMPLATE = """
         
         <form method="POST">
             <div>
-                <textarea id="mol_query" name="mol_query" placeholder="例如: P_1 P_2 P_3 或直接換行貼上">{{ query_raw }}</textarea>
+                <textarea id="mol_query" name="mol_query" placeholder="例如: P_64 P_137 或直接換行貼上">{{ query_raw }}</textarea>
             </div>
             <div class="btn-group">
                 <button type="submit">查詢</button>
@@ -151,13 +150,11 @@ def index():
   if request.method == 'POST':
     try:
       query_raw = request.form.get('mol_query', '').strip()
-      # 透過正規表達式切割出所有分子編號（支援換行、空格、逗號等分隔符號）
       mol_ids = [
           m.strip()
           for m in re.split(r'[\s,\n\r]+', query_raw)
           if m.strip()
       ]
-      # 移除重複但保持輸入順序
       mol_ids = list(dict.fromkeys(mol_ids))
 
       if not mol_ids:
@@ -165,7 +162,7 @@ def index():
 
       for query_id in mol_ids:
         if query_id not in molecules_data:
-          continue  # 找不到的略過或可另外記錄
+          continue
 
         mol_dict = molecules_data[query_id]
         img_paths = {}
@@ -195,7 +192,6 @@ def index():
             except (ValueError, TypeError):
               pass
 
-          # 取得分數
           dot_val = row.get('Dot_Product', 'N/A')
           cos_val = row.get('Weighted_Cosine_Similarity', 'N/A')
           try:
@@ -207,7 +203,6 @@ def index():
           except:
             pass
 
-          # 畫圖
           fig, ax = plt.subplots(figsize=(4, 2.5), dpi=120)
           if mz_old:
             ax.vlines(mz_old, 0, int_old, color='royalblue', linewidth=1.5)
